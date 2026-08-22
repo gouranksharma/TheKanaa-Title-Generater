@@ -1,70 +1,75 @@
-import os
 import streamlit as st
 from google import genai
 from google.genai import types
 
-# Page Configuration
+# Page Configuration & Styling
 st.set_page_config(
     page_title="E-Commerce AI Title Generator",
     page_icon="🛍️",
-    layout="wide"
+    layout="centered"
 )
 
+st.markdown("""
+    <style>
+    .main { padding: 2rem; }
+    .stButton>button {
+        width: 100%;
+        background-color: #4F46E5;
+        color: white;
+        font-weight: bold;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #4338CA;
+        color: white;
+    }
+    div.stTextArea textarea {
+        border-radius: 8px;
+        border: 1px solid #D1D5DB;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # App Header
-st.title("🛍️ E-Commerce AI Title Generator")
-st.markdown("Transform messy, unformatted raw product titles into clean, SEO-optimized, and standardized titles instantly.")
+st.markdown("<h1 style='text-align: center; color: #1F2937;'>🛍️ E-Commerce AI Title Generator</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #6B7280;'>Paste your raw product titles below and convert them into clean, SEO-optimized standards instantly.</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-# Sidebar for API Key Configuration
-with st.sidebar:
-    st.header("Configuration")
-    api_key_input = st.text_input("Enter Gemini API Key", type="password")
-    
-    model_choice = st.selectbox(
-        "Select Model",
-        ["gemini-2.5-flash", "gemini-2.5-pro"]
-    )
-    
-    st.markdown("---")
-    st.markdown("### Standard Formula")
-    st.markdown("`[Brand] [Product Name] [Key Feature/Material] [Target Audience] [Color/Size]`")
+MODEL_CHOICE = "gemini-2.5-flash"
 
-# Main Interface Layout
-col1, col2 = st.columns(2)
+# Input Section
+st.markdown("### 📥 Raw Product Titles")
+st.markdown("Enter your titles below (one per line):")
 
-with col1:
-    st.subheader("📥 Raw Input Titles")
-    st.markdown("Enter your raw product titles below (one per line):")
-    
-    default_input = (
-        "nike air max shoes black size 9 running mens\n"
-        "samsung 4k smart tv 55 inch led ultra hd\n"
-        "stainless steel water bottle 32oz insulated blue"
-    )
-    
-    raw_titles_text = st.text_area("Raw Titles", value=default_input, height=250)
+default_input = (
+    "nike air max shoes black size 9 running mens\n"
+    "samsung 4k smart tv 55 inch led ultra hd\n"
+    "stainless steel water bottle 32oz insulated blue"
+)
 
-# Process Button
-if st.button("✨ Generate Standardized Titles", type="primary"):
-    # Check for API key (supports input box or Streamlit secrets for deployment)
-    api_key = api_key_input or os.environ.get("GEMINI_API_KEY")
-    
-    try:
-        if not api_key and "GEMINI_API_KEY" in st.secrets:
-            api_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        pass
+raw_titles_text = st.text_area("Raw Titles Area", value=default_input, height=180, label_visibility="collapsed")
+st.markdown("<br>", unsafe_allow_html=True)
 
-    if not api_key:
-        st.error("⚠️ Please provide a Gemini API Key in the sidebar or add it to your Streamlit Secrets.")
+# Generate Button
+if st.button("✨ Generate Standardized Titles"):
+    titles_list = [t.strip() for t in raw_titles_text.split("\n") if t.strip()]
+    
+    if not titles_list:
+        st.warning("⚠️ Please enter at least one product title to process.")
     else:
-        titles_list = [t.strip() for t in raw_titles_text.split("\n") if t.strip()]
-        
-        if not titles_list:
-            st.warning("⚠️ Please enter at least one title to process.")
+        # Securely fetch the API key from Streamlit cloud configuration
+        try:
+            api_key = st.secrets["GEMINI_API_KEY"]
+        except Exception:
+            api_key = None
+            
+        if not api_key:
+            st.error("⚠️ API Key is not configured in the app settings.")
         else:
-            with st.spinner("Processing titles with AI..."):
+            with st.spinner("🤖 AI is formatting your titles..."):
                 try:
-                    # Initialize the Gemini client
                     client = genai.Client(api_key=api_key)
                     
                     system_instruction = (
@@ -78,7 +83,7 @@ if st.button("✨ Generate Standardized Titles", type="primary"):
                     prompt = f"Please standardize the following raw e-commerce product titles:\n\n{raw_titles_text}"
                     
                     response = client.models.generate_content(
-                        model=model_choice,
+                        model=MODEL_CHOICE,
                         contents=prompt,
                         config=types.GenerateContentConfig(
                             system_instruction=system_instruction,
@@ -86,9 +91,9 @@ if st.button("✨ Generate Standardized Titles", type="primary"):
                         )
                     )
                     
-                    with col2:
-                        st.subheader("📤 Standardized Output")
-                        st.markdown(response.text)
-                        
+                    st.markdown("---")
+                    st.markdown("### 📤 Standardized Output")
+                    st.markdown(response.text)
+                            
                 except Exception as e:
-                    st.error(f"❌ An error occurred during processing: {e}")
+                    st.error(f"❌ An error occurred during processing.")
