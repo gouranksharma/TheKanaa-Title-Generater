@@ -37,6 +37,8 @@ st.markdown("<h1 style='text-align: center; color: #1F2937;'>🛍️ E-Commerce 
 st.markdown("<p style='text-align: center; color: #6B7280;'>Paste your raw product titles below and convert them into clean, SEO-optimized standards instantly.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
+# PASTE YOUR VALID STANDARD GEMINI API KEY HERE (starts with AIza...)
+DIRECT_API_KEY = "AIzaSy..." 
 MODEL_CHOICE = "gemini-2.5-flash"
 
 # Input Section
@@ -58,42 +60,35 @@ if st.button("✨ Generate Standardized Titles"):
     
     if not titles_list:
         st.warning("⚠️ Please enter at least one product title to process.")
+    elif DIRECT_API_KEY == "AIzaSy...":
+        st.error("⚠️ Please replace the placeholder with your actual Gemini API key in the code.")
     else:
-        # Securely fetch the API key from Streamlit cloud configuration
-        try:
-            api_key = st.secrets["GEMINI_API_KEY"]
-        except Exception:
-            api_key = None
-            
-        if not api_key:
-            st.error("⚠️ API Key is not configured in the app settings.")
-        else:
-            with st.spinner("🤖 AI is formatting your titles..."):
-                try:
-                    client = genai.Client(api_key=api_key)
-                    
-                    system_instruction = (
-                        "You are an expert e-commerce SEO copywriter. "
-                        "Your task is to transform messy raw product titles into clean, optimized, and standardized titles. "
-                        "Follow this structure: [Brand] [Product Name] [Key Feature/Material] [Target Audience/Use Case] [Variant: Color/Size]. "
-                        "Capitalize appropriately (Title Case), remove keyword spam, filler words, and unnecessary punctuation. "
-                        "Return only the transformed titles as a clean numbered list matching the input order."
+        with st.spinner("🤖 AI is formatting your titles..."):
+            try:
+                client = genai.Client(api_key=DIRECT_API_KEY)
+                
+                system_instruction = (
+                    "You are an expert e-commerce SEO copywriter. "
+                    "Your task is to transform messy raw product titles into clean, optimized, and standardized titles. "
+                    "Follow this structure: [Brand] [Product Name] [Key Feature/Material] [Target Audience/Use Case] [Variant: Color/Size]. "
+                    "Capitalize appropriately (Title Case), remove keyword spam, filler words, and unnecessary punctuation. "
+                    "Return only the transformed titles as a clean numbered list matching the input order."
+                )
+                
+                prompt = f"Please standardize the following raw e-commerce product titles:\n\n{raw_titles_text}"
+                
+                response = client.models.generate_content(
+                    model=MODEL_CHOICE,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.2,
                     )
-                    
-                    prompt = f"Please standardize the following raw e-commerce product titles:\n\n{raw_titles_text}"
-                    
-                    response = client.models.generate_content(
-                        model=MODEL_CHOICE,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            system_instruction=system_instruction,
-                            temperature=0.2,
-                        )
-                    )
-                    
-                    st.markdown("---")
-                    st.markdown("### 📤 Standardized Output")
-                    st.markdown(response.text)
-                            
-                except Exception as e:
-                    st.error(f"❌ An error occurred during processing.")
+                )
+                
+                st.markdown("---")
+                st.markdown("### 📤 Standardized Output")
+                st.markdown(response.text)
+                        
+            except Exception as e:
+                st.error(f"❌ An error occurred during processing: {e}")
